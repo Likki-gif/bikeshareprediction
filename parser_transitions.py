@@ -64,8 +64,9 @@ class PartialParse(object):
         elif transition == "RA": #Right Arc transition
             try:
                 self.dependencies.append((self.stack[-2], self.stack.pop(-1)))
-            except:
-                print("Right-Arc action not possible in the present configuration")
+            except Exception as e:
+                print("Stack size: ", len(self.stack))
+                print("Right-Arc action not possible in the present configuration: ", e)
         else:
             pass
         ### END YOUR CODE
@@ -117,10 +118,16 @@ def minibatch_parse(sentences, model, batch_size):
     ###             contains references to the same objects. Thus, you should NOT use the `del` operator
     ###             to remove objects from the `unfinished_parses` list. This will free the underlying memory that
     ###             is being accessed by `partial_parses` and may cause your code to crash.
-
-
+    partial_parses = list(map(lambda x: PartialParse(x), sentences))
+    unfinished_parses = partial_parses[:]
+    while unfinished_parses:
+        transitions = model.predict(unfinished_parses[:batch_size])
+        for parse, transition in zip(unfinished_parses[:batch_size], transitions):
+            parse.parse_step(transition)
+            if len(parse.stack) == 1 and len(parse.buffer) == 0:
+                unfinished_parses = [x for x in unfinished_parses if x!= parse]
+    dependencies = [i.dependencies for i in partial_parses]
     ### END YOUR CODE
-
     return dependencies
 
 
